@@ -271,8 +271,8 @@
     let charts = {};
     const QUEUE_TARGETS = { "Author": 36, "Reviewer": 44, "Login & Account": 29, "Submission Start": 30, "OA 1LS": 22, "All": 30 };
 
-    // WEB APP URL MO
-    const WEB_APP_URL = "https://script.google.com/a/macros/straive.com/s/AKfycby98_38M9jeqL7Zdytb152n3UyuxnGmlFsNOLWI-FPyunaYY3g2e0CUMwS6gW8Yal5ZlQ/exec";
+    // ETO ANG BAGONG CSV URL MO MULA SA PUBLISH TO WEB
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkus74H-JRD5Dve4dnbeiZ6TzUWuOP_rkEOzeWk_cY_LZNM4gBc36LoMhh8O1QmOsVRKQbld8Yibhy/pub?gid=0&single=true&output=csv";
 
     function toggleTheme() {
       const body = document.body;
@@ -285,22 +285,48 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => { 
-      // 1. Try Fetch first (for GitHub)
-      fetch(`${WEB_APP_URL}?getJson=true`)
-        .then(response => response.json())
-        .then(data => { 
+      // Gamit tayo ng Fetch para sa CSV URL
+      fetch(CSV_URL)
+        .then(response => response.text())
+        .then(csvText => { 
+          const data = parseCSV(csvText);
           loadDashboard(data);
         })
         .catch(err => {
-          console.warn("External fetch failed, trying internal google.script.run...");
-          // 2. Fallback to Google Script (for internal testing)
-          if (typeof google !== 'undefined') {
-            google.script.run.withSuccessHandler(data => { 
-              loadDashboard(data);
-            }).getDashboardData(); 
-          }
+          console.error("Error loading CSV:", err);
+          alert("Failed to load data. Please check your internet connection.");
         });
     });
+
+    // Function para gawing Dashboard-ready ang CSV data
+    function parseCSV(text) {
+      const rows = text.split('\n').map(row => {
+          // Ito ay para i-handle ang commas sa loob ng values (kung meron man)
+          return row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      });
+      const headers = rows[0].map(h => h.trim().replace(/"/g, ''));
+      
+      return rows.slice(1).filter(row => row.length > 1).map(row => {
+          let obj = {};
+          headers.forEach((header, i) => {
+              let val = row[i] ? row[i].trim().replace(/"/g, '') : "";
+              
+              // Map columns to match your existing logic
+              if (header === "Date") obj.date = val;
+              else if (header === "Agent Name") obj.employeeName = val;
+              else if (header === "Supervisor") obj.supervisor = val;
+              else if (header === "Status") obj.status = val;
+              else if (header === "Tenure") obj.tenurity = val;
+              else if (header === "Main Queue") obj.mainQueue = val;
+              else if (header === "Chat Solved") obj.chatSolved = parseFloat(val) || 0;
+              else if (header === "Chat Closed") obj.chatClosed = parseFloat(val) || 0;
+              else if (header === "Other Solved") obj.otherSolved = parseFloat(val) || 0;
+              else if (header === "Other Closed") obj.otherClosed = parseFloat(val) || 0;
+              else if (header === "Total Productivity") obj.totalProductivity = parseFloat(val) || 0;
+          });
+          return obj;
+      });
+    }
 
     function loadDashboard(data) {
       rawData = data; 
