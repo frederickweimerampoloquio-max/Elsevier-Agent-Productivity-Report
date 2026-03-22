@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    :root { 
+      --bg-color: #eef2f7; 
+      --card-bg: rgba(255, 255, 255, 0.6);
+      --text-main: #1a202c; 
+      --text-muted: #4a5568; 
+      --accent: #2563eb; 
+      --shadow-out: 10px 10px 20px #d1d9e6, -10px -10px 20px #ffffff;
+      --shadow-in: inset 5px 5px 10px #d1d9e6, inset -5px -5px 10px #ffffff;
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --danger-light: rgba(239, 68, 68, 0.1);
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #0f172a; 
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --text-main: #ffffff; 
+      --text-muted: #cbd5e1; 
+      --accent: #3b82f6; 
+      --shadow-out: 10px 10px 20px #080d1a, -5px -5px 15px #1e293b;
+      --shadow-in: inset 5px 5px 10px #080d1a, inset -5px -5px 10px #1e293b;
+      --glass-border: rgba(255, 255, 255, 0.05);
+      --danger-light: rgba(248, 113, 113, 0.15);
+    }
+
+    body { 
+      background-color: var(--bg-color); 
+      color: var(--text-main); 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      font-size: 0.9rem; 
+      transition: all 0.3s ease;
+    }
+
+    .row-fail {
+      background-color: var(--danger-light) !important;
+    }
+    .row-fail td:first-child {
+      border-left: 4px solid #ef4444 !important;
+    }
+
+    .card { 
+      background: var(--card-bg); 
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 24px; padding: 25px; 
+      box-shadow: var(--shadow-out); border: 1px solid var(--glass-border);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover { 
+      transform: translateY(-8px); 
+      box-shadow: 0 15px 30px rgba(0,0,0,0.15); 
+      border-color: var(--accent);
+    }
+
+    .nav-item { 
+      padding: 10px 14px; cursor: pointer; font-weight: 800; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+      color: var(--text-muted); margin-bottom: 4px; border-radius: 10px; display: flex; align-items: center; gap: 10px; font-size: 0.8rem;
+    }
+    .nav-item:hover:not(.nav-active) { 
+      padding-left: 22px; 
+      background: rgba(37, 99, 235, 0.1); 
+      color: var(--accent); 
+    }
+
+    .matrix-table tbody tr { transition: all 0.2s ease; }
+    .matrix-table tbody tr:hover { 
+      background: rgba(37, 99, 235, 0.08) !important; 
+      transform: scale(1.005);
+    }
+    .matrix-table tbody tr:hover td { color: var(--accent) !important; }
+
+    .list-row { transition: all 0.3s ease; cursor: pointer; border-radius: 12px; padding: 8px; }
+    .list-row:hover { 
+      background: var(--shadow-in); 
+      transform: translateX(5px); 
+    }
+
+    .text-muted-custom { color: var(--text-muted) !important; font-weight: 700 !important; }
+    .apexcharts-canvas text { fill: var(--text-main) !important; font-weight: 700 !important; }
+    .kpi-value { transition: all 0.3s ease; font-weight: 800 !important; }
+
+    .theme-toggle {
+      width: 45px; height: 24px; background: var(--shadow-in); border-radius: 50px; position: relative; cursor: pointer;
+    }
+    .theme-toggle .dot {
+      position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: var(--accent); border-radius: 50%; transition: 0.3s;
+      display: flex; align-items: center; justify-content: center; color: white; font-size: 10px;
+    }
+    [data-theme="dark"] .theme-toggle .dot { transform: translateX(21px); background: #facc15; }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-color) 25%, var(--text-muted) 50%, var(--bg-color) 75%);
+      background-size: 200% 100%; animation: loading 1.5s infinite;
+      opacity: 0.2;
+    }
+    @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    .sidebar { 
+      width: 260px; background: var(--bg-color); height: 100vh; position: fixed; 
+      left: 0; top: 0; box-shadow: 10px 0 30px rgba(0,0,0,0.05); z-index: 50; padding: 20px 15px; overflow-y: auto;
+    }
+    .nav-active { 
+      background: var(--accent) !important; color: white !important; 
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .main-content { margin-left: 260px; padding: 40px; }
+    .input-neu, .select-neu {
+      width: 100%; background: var(--bg-color); border: none; padding: 8px 10px; 
+      border-radius: 10px; box-shadow: var(--shadow-in); outline: none; font-weight: 800; color: var(--text-main); font-size: 0.75rem;
+    }
+    .btn-neu { 
+      background: var(--bg-color); border-radius: 14px; box-shadow: var(--shadow-out); 
+      font-weight: 800; padding: 12px 20px; cursor: pointer; transition: 0.2s; border: 1px solid var(--glass-border); color: var(--text-main);
+    }
+    .btn-neu:active { box-shadow: var(--shadow-in); transform: scale(0.95); }
+    .btn-active { box-shadow: var(--shadow-in); color: var(--accent); border-color: var(--accent); }
+
+    .matrix-table-container { border-radius: 20px; overflow-y: auto; max-height: 600px; box-shadow: var(--shadow-in); }
+    .matrix-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .matrix-table th { 
+      position: sticky; top: 0; z-index: 30; background: var(--accent); 
+      padding: 15px; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; color: white; 
+    }
+    .matrix-table td { padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.05); font-weight: 800; color: var(--text-main); }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body data-theme="light">
+
+  <div class="sidebar">
+    <div class="flex items-center justify-between mb-8">
+      <h2 class="text-lg font-black text-blue-600 tracking-tighter italic"><i class="fas fa-bolt"></i> QueueHub</h2>
+      <div class="theme-toggle" onclick="toggleTheme()">
+        <div class="dot"><i id="theme-icon" class="fas fa-sun"></i></div>
+      </div>
+    </div>
+
+    <div id="queueList" class="space-y-1"></div>
+
+    <div class="mt-8 pt-6 border-t border-gray-300 space-y-5">
+      <div>
+        <label class="text-[9px] font-black text-muted-custom uppercase mb-2 block tracking-widest">Agent Search</label>
+        <input type="text" id="searchAgent" onkeyup="runFilters()" placeholder="Search name..." class="input-neu">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[9px] font-black text-muted-custom uppercase mb-2 block tracking-widest">Status</label>
+          <select id="filterStatus" onchange="runFilters()" multiple class="select-neu"></select>
+        </div>
+        <div>
+          <label class="text-[9px] font-black text-muted-custom uppercase mb-2 block tracking-widest">Tenure</label>
+          <select id="filterTenure" onchange="runFilters()" multiple class="select-neu"></select>
+        </div>
+      </div>
+      <div>
+        <label class="text-[9px] font-black text-muted-custom uppercase mb-2 block tracking-widest">Team Leader</label>
+        <select id="filterSup" onchange="runFilters()" class="select-neu"></select>
+      </div>
+      <div>
+        <label class="text-[9px] font-black text-muted-custom uppercase mb-2 block tracking-widest">Timeline</label>
+        <div class="flex gap-2">
+          <select id="matrixDateFilter" onchange="runFilters()" class="select-neu"></select>
+          <button onclick="resetDate()" class="btn-neu" style="padding: 8px 12px;">↺</button>
+        </div>
+      </div>
+      <button onclick="resetFilters()" class="w-full py-3 rounded-xl font-black text-red-500 hover:bg-red-50 transition-all text-[9px] tracking-widest border border-red-100 shadow-md">RESET ALL FILTERS</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="flex justify-between items-end mb-10">
+      <div>
+        <h1 class="text-4xl font-black tracking-tight">Elsevier Agent Productivity<span class="text-blue-600"> Report</span></h1>
+        <p id="dateIndicator" class="text-muted-custom font-black mt-1 uppercase text-[10px] tracking-widest">Full Month Overview</p>
+      </div>
+      <div class="flex items-center gap-4">
+        <div id="targetDisplay" class="text-xs font-black text-blue-700 bg-blue-100/50 px-6 py-4 rounded-2xl border border-blue-200">Target: --</div>
+        <button id="toggleVisuals" onclick="toggleView('visuals')" class="btn-neu btn-active">Visuals</button>
+        <button id="toggleLogs" onclick="toggleView('logs')" class="btn-neu">Daily Logs</button>
+      </div>
+    </div>
+
+    <div id="skeletonLoader" class="grid grid-cols-5 gap-6 mb-10">
+      <div class="card h-28 skeleton"></div>
+      <div class="card h-28 skeleton"></div>
+      <div class="card h-28 skeleton"></div>
+      <div class="card h-28 skeleton"></div>
+      <div class="card h-28 skeleton"></div>
+    </div>
+
+    <div id="visualsContent" class="hidden">
+      <div class="grid grid-cols-5 gap-6 mb-10">
+        <div class="card text-center">
+          <p class="text-[10px] font-black text-muted-custom uppercase tracking-widest">Avg MTD Prod</p>
+          <p id="kpi-mtd-prod" class="kpi-value text-3xl font-black">0</p>
+        </div>
+        <div class="card text-center"><p class="text-[10px] font-black text-muted-custom uppercase tracking-widest">Avg Chat Solved</p><p id="kpi-cs" class="kpi-value text-3xl font-black text-blue-600">0</p></div>
+        <div class="card text-center"><p class="text-[10px] font-black text-muted-custom uppercase tracking-widest">Avg Chat Closed</p><p id="kpi-cc" class="kpi-value text-3xl font-black text-blue-400">0</p></div>
+        <div class="card text-center"><p class="text-[10px] font-black text-muted-custom uppercase tracking-widest">Avg Email Solved</p><p id="kpi-es" class="kpi-value text-3xl font-black text-green-600">0</p></div>
+        <div class="card text-center"><p class="text-[10px] font-black text-muted-custom uppercase tracking-widest">Avg Email Closed</p><p id="kpi-ec" class="kpi-value text-3xl font-black text-green-400">0</p></div>
+      </div>
+
+      <div class="card mb-10">
+        <h3 class="text-xs font-black text-muted-custom uppercase mb-6 tracking-widest">Daily Productivity Trend</h3>
+        <div id="trendChart" style="min-height: 350px;"></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-8 mb-10">
+        <div class="card">
+          <h3 class="text-xs font-black text-green-600 uppercase mb-6 flex items-center gap-2"><i class="fas fa-star"></i> Top Performers</h3>
+          <div id="top10Table" class="space-y-1"></div>
+        </div>
+        <div class="card">
+          <h3 class="text-xs font-black text-red-500 uppercase mb-6 flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> Below Target</h3>
+          <div id="bot10Table" class="space-y-1"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-8 mb-10">
+        <div class="card"><h3 class="text-[10px] font-black text-muted-custom uppercase mb-6 tracking-widest text-center">TL Performance</h3><div id="supChart"></div></div>
+        <div class="card"><h3 class="text-[10px] font-black text-muted-custom uppercase mb-6 tracking-widest text-center">Channel Volume</h3><div id="channelChart"></div></div>
+      </div>
+
+      <div class="card">
+        <h3 class="text-xs font-black text-muted-custom uppercase mb-8 tracking-widest">MTD Agent Performance Summary</h3>
+        <div class="matrix-table-container">
+          <table id="agentTable" class="matrix-table text-center">
+            <thead>
+              <tr><th class="text-left">Agent Name</th><th>Avg CS</th><th>Avg CC</th><th>Avg ES</th><th>Avg EC</th><th class="text-white">Avg Prod</th></tr>
+            </thead>
+            <tbody id="agentMtdBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="logsContent" class="card hidden">
+      <div class="flex justify-between items-center mb-8">
+        <h3 class="text-xs font-black text-muted-custom uppercase tracking-widest">Daily Raw Activity Logs</h3>
+        <select id="logsDateFilter" onchange="syncDateFilter(this.value)" class="select-neu w-48"></select>
+      </div>
+      <div class="matrix-table-container">
+        <table id="logsTable" class="matrix-table w-full text-center">
+          <thead>
+            <tr><th>Date</th><th class="text-left">Agent Name</th><th>CS</th><th>CC</th><th>ES</th><th>EC</th><th class="text-white">Prod</th></tr>
+          </thead>
+          <tbody id="logsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let rawData = []; 
+    let activeQ = 'All'; 
+    let charts = {};
+    const QUEUE_TARGETS = { "Author": 36, "Reviewer": 44, "Login & Account": 29, "Submission Start": 30, "OA 1LS": 22, "All": 30 };
+
+    // WEB APP URL MO
+    const WEB_APP_URL = "https://script.google.com/a/macros/straive.com/s/AKfycby98_38M9jeqL7Zdytb152n3UyuxnGmlFsNOLWI-FPyunaYY3g2e0CUMwS6gW8Yal5ZlQ/exec";
+
+    function toggleTheme() {
+      const body = document.body;
+      const icon = document.getElementById('theme-icon');
+      const currentTheme = body.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      body.setAttribute('data-theme', newTheme);
+      icon.className = newTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+      runFilters(); 
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { 
+      // 1. Try Fetch first (for GitHub)
+      fetch(`${WEB_APP_URL}?getJson=true`)
+        .then(response => response.json())
+        .then(data => { 
+          loadDashboard(data);
+        })
+        .catch(err => {
+          console.warn("External fetch failed, trying internal google.script.run...");
+          // 2. Fallback to Google Script (for internal testing)
+          if (typeof google !== 'undefined') {
+            google.script.run.withSuccessHandler(data => { 
+              loadDashboard(data);
+            }).getDashboardData(); 
+          }
+        });
+    });
+
+    function loadDashboard(data) {
+      rawData = data; 
+      initUI(data); 
+      runFilters(); 
+      document.getElementById('skeletonLoader').classList.add('hidden');
+      document.getElementById('visualsContent').classList.remove('hidden');
+    }
+
+    function initUI(data) {
+      const fillSelect = (id, prop) => {
+        const vals = [...new Set(data.map(r => r[prop]))].filter(v => v).sort();
+        document.getElementById(id).innerHTML = (id === 'filterSup' ? '<option value="All">All Supervisors</option>' : '') + vals.map(v => `<option value="${v}">${v}</option>`).join('');
+      };
+      fillSelect('filterStatus', 'status');
+      fillSelect('filterTenure', 'tenurity');
+      fillSelect('filterSup', 'supervisor');
+
+      const qList = document.getElementById('queueList');
+      qList.innerHTML = '<div class="nav-item nav-active" onclick="setQueue(\'All\', this)"><i class="fas fa-th-large"></i> Overall Fleet</div>';
+      Object.keys(QUEUE_TARGETS).filter(q => q !== 'All').forEach(q => { 
+        qList.innerHTML += `<div class="nav-item" onclick="setQueue('${q}', this)"><i class="fas fa-chevron-right text-[8px]"></i> ${q}</div>`; 
+      });
+      
+      const uniqueDates = [...new Set(data.map(r => r.date))].sort((a,b)=>new Date(a)-new Date(b));
+      const dateOptions = '<option value="All">MTD (Full Month)</option>' + uniqueDates.map(d => `<option value="${d}">${d}</option>`).join('');
+      document.getElementById('matrixDateFilter').innerHTML = dateOptions;
+      document.getElementById('logsDateFilter').innerHTML = dateOptions;
+    }
+
+    function runFilters() {
+      const search = document.getElementById('searchAgent').value.toLowerCase();
+      const sup = document.getElementById('filterSup').value;
+      const sts = Array.from(document.getElementById('filterStatus').selectedOptions).map(o => o.value);
+      const tns = Array.from(document.getElementById('filterTenure').selectedOptions).map(o => o.value);
+      const dt = document.getElementById('matrixDateFilter').value;
+      
+      document.getElementById('logsDateFilter').value = dt;
+      let f = rawData;
+      if(activeQ !== 'All') f = f.filter(r => r.mainQueue === activeQ);
+      if(search) f = f.filter(r => r.employeeName.toLowerCase().includes(search));
+      if(sup !== 'All') f = f.filter(r => r.supervisor === sup);
+      if(sts.length > 0) f = f.filter(r => sts.includes(r.status));
+      if(tns.length > 0) f = f.filter(r => tns.includes(r.tenurity));
+      
+      document.getElementById('dateIndicator').innerText = dt === "All" ? "Full Month Overview" : `Snapshot: ${dt}`;
+      render(f, (dt !== 'All' ? f.filter(r => r.date === dt) : f));
+    }
+
+    function render(allData, filteredData) {
+      let trend = {}, sups = {}, ags = {}, kpi = { cs:0, cc:0, es:0, ec:0, p:0, c:0 };
+      const target = QUEUE_TARGETS[activeQ];
+
+      const sortedLogs = [...filteredData].sort((a,b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        if (dateA - dateB !== 0) return dateA - dateB;
+        return a.totalProductivity - b.totalProductivity;
+      });
+
+      document.getElementById('logsTableBody').innerHTML = sortedLogs.map(r => {
+        const isLow = r.totalProductivity < target;
+        return `
+        <tr class="${isLow ? 'row-fail' : ''}">
+          <td>${r.date}</td>
+          <td class="text-left font-black">${r.employeeName}</td>
+          <td>${r.chatSolved}</td>
+          <td>${r.chatClosed}</td>
+          <td>${r.otherSolved}</td>
+          <td>${r.otherClosed}</td>
+          <td class="${isLow ? 'text-red-500' : 'text-blue-600'} font-black">${r.totalProductivity}</td>
+        </tr>`;
+      }).join('');
+
+      allData.forEach(r => {
+        if(!trend[r.date]) trend[r.date] = { s: 0, c: 0 };
+        if(r.totalProductivity > 0) { trend[r.date].s += r.totalProductivity; trend[r.date].c++; }
+      });
+
+      filteredData.forEach(r => {
+        if(!sups[r.supervisor]) sups[r.supervisor] = { p: 0, c: 0 };
+        if(r.totalProductivity > 0) { sups[r.supervisor].p += r.totalProductivity; sups[r.supervisor].c++; }
+        if(!ags[r.employeeName]) ags[r.employeeName] = { cs:0, cc:0, es:0, ec:0, p:0, c:0 };
+        ags[r.employeeName].cs += r.chatSolved; ags[r.employeeName].cc += r.chatClosed;
+        ags[r.employeeName].es += r.otherSolved; ags[r.employeeName].ec += r.otherClosed;
+        if(r.totalProductivity > 0) { ags[r.employeeName].p += r.totalProductivity; ags[r.employeeName].c++; }
+        kpi.cs += r.chatSolved; kpi.cc += r.chatClosed; kpi.es += r.otherSolved; kpi.ec += r.otherClosed;
+        if(r.totalProductivity > 0) { kpi.p += r.totalProductivity; kpi.c++; }
+      });
+
+      const divisor = kpi.c || 1;
+      const mtdAvg = kpi.p / divisor;
+      document.getElementById('kpi-mtd-prod').innerText = mtdAvg.toFixed(2);
+      document.getElementById('kpi-mtd-prod').className = `kpi-value text-3xl font-black ${mtdAvg < target ? 'text-red-500' : 'text-blue-600'}`;
+      document.getElementById('kpi-cs').innerText = (kpi.cs / divisor).toFixed(1);
+      document.getElementById('kpi-cc').innerText = (kpi.cc / divisor).toFixed(1);
+      document.getElementById('kpi-es').innerText = (kpi.es / divisor).toFixed(1);
+      document.getElementById('kpi-ec').innerText = (kpi.ec / divisor).toFixed(1);
+
+      const listForSummary = Object.keys(ags).map(n => ({ n, p: ags[n].p/(ags[n].c||1) }));
+      const sortedSummary = [...listForSummary].sort((a,b) => a.p - b.p); 
+      const highestFirst = [...listForSummary].sort((a,b) => b.p - a.p); 
+      
+      const rowTpl = (a, i, clr) => `<div class="list-row flex items-center p-3"><span class="text-[10px] text-muted-custom w-6">#${i+1}</span><span class="flex-grow font-black truncate">${a.n}</span><span class="${clr} font-black ml-2">${a.p.toFixed(2)}</span></div>`;
+      
+      document.getElementById('top10Table').innerHTML = highestFirst.filter(a => a.p >= target).slice(0, 10).map((a,i) => rowTpl(a,i,'text-green-600')).join('');
+      document.getElementById('bot10Table').innerHTML = [...highestFirst].reverse().filter(a => a.p < target).slice(0, 10).map((a,i) => rowTpl(a,i,'text-red-500')).join('');
+
+      document.getElementById('agentMtdBody').innerHTML = sortedSummary.map(a => {
+        const ag = ags[a.n]; const days = ag.c || 1;
+        const isLow = a.p < target;
+        return `
+        <tr class="${isLow ? 'row-fail' : ''}">
+          <td class="text-left font-black">${a.n}</td>
+          <td>${(ag.cs/days).toFixed(1)}</td>
+          <td>${(ag.cc/days).toFixed(1)}</td>
+          <td>${(ag.es/days).toFixed(1)}</td>
+          <td>${(ag.ec/days).toFixed(1)}</td>
+          <td class="${isLow ? 'text-red-500' : 'text-blue-600'} font-black">${a.p.toFixed(2)}</td>
+        </tr>`;
+      }).join('');
+
+      updateCharts(Object.keys(trend).sort((a,b)=>new Date(a)-new Date(b)), trend, sups, filteredData);
+    }
+
+    function updateCharts(dates, trend, sups, data) {
+      const target = QUEUE_TARGETS[activeQ];
+      const isDark = document.body.getAttribute('data-theme') === 'dark';
+      const chartTheme = isDark ? 'dark' : 'light';
+      const axisLabelColor = isDark ? '#FFFFFF' : '#1a202c'; 
+
+      const commonOptions = {
+        theme: { mode: chartTheme },
+        chart: { 
+          toolbar: { show: false }, 
+          background: 'transparent',
+          animations: { enabled: true, easing: 'easeinout', speed: 800 } 
+        },
+        states: {
+          hover: { filter: { type: 'lighten', value: 0.15 } },
+          active: { filter: { type: 'none' } }
+        },
+        xaxis: { labels: { style: { colors: axisLabelColor, fontSize: '11px', fontWeight: 800 } } },
+        yaxis: { labels: { style: { colors: axisLabelColor, fontSize: '11px', fontWeight: 800 } } },
+        legend: { labels: { colors: axisLabelColor, fontWeight: 700 } },
+        dataLabels: { 
+          enabled: true, 
+          style: { fontSize: '11px', fontWeight: 900, colors: [isDark ? '#000000' : '#FFFFFF'] },
+          background: { enabled: true, foreColor: isDark ? '#000000' : '#FFFFFF', padding: 4, borderRadius: 4, opacity: 1 } 
+        }
+      };
+
+      if(charts.t) charts.t.destroy();
+      charts.t = new ApexCharts(document.querySelector("#trendChart"), {
+        ...commonOptions,
+        chart: { ...commonOptions.chart, type: 'area', height: 350, events: { markerClick: (e, ctx, { dataPointIndex }) => syncDateFilter(dates[dataPointIndex]) } },
+        stroke: { curve: 'smooth', width: 4 }, colors: ['#2563eb'],
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
+        series: [{ name: 'Avg Prod', data: dates.map(d => (trend[d].s / (trend[d].c || 1)).toFixed(2)) }],
+        annotations: { yaxis: [{ y: target, borderColor: '#ef4444', strokeDashArray: 4, label: { text: 'TARGET', style: { color: '#fff', background: '#ef4444', fontWeight: 800 } } }] }
+      });
+      charts.t.render();
+
+      const sNames = Object.keys(sups).sort((a,b) => (sups[a].p/sups[a].c) - (sups[b].p/sups[b].c));
+      if(charts.s) charts.s.destroy();
+      charts.s = new ApexCharts(document.querySelector("#supChart"), {
+        ...commonOptions,
+        chart: { ...commonOptions.chart, type: 'bar', height: 300, events: { dataPointSelection: (e, ctx, cfg) => {
+          const s = sNames[cfg.dataPointIndex];
+          const filterEl = document.getElementById('filterSup');
+          filterEl.value = (filterEl.value === s ? "All" : s);
+          runFilters();
+        }}},
+        plotOptions: { bar: { horizontal: true, borderRadius: 8, barHeight: '50%', distributed: false, dataLabels: { position: 'center' } } },
+        colors: ['#2563eb'],
+        series: [{ name: 'Prod Score', data: sNames.map(k => (sups[k].p / (sups[k].c || 1)).toFixed(2)) }],
+        xaxis: { categories: sNames, labels: { style: { colors: axisLabelColor, fontWeight: 800 } } },
+        legend: { show: false }
+      });
+      charts.s.render();
+
+      const sumStats = [data.reduce((a,b)=>a+b.chatSolved,0), data.reduce((a,b)=>a+b.chatClosed,0), data.reduce((a,b)=>a+b.otherSolved,0), data.reduce((a,b)=>a+b.otherClosed,0)];
+      if(charts.c) charts.c.destroy();
+      charts.c = new ApexCharts(document.querySelector("#channelChart"), {
+        ...commonOptions,
+        chart: { ...commonOptions.chart, type: 'bar', height: 300 },
+        plotOptions: { bar: { columnWidth: '60%', borderRadius: 10, distributed: true, dataLabels: { position: 'top' } } },
+        colors: ['#2563eb', '#60a5fa', '#059669', '#34d399'],
+        series: [{ name: 'Total', data: sumStats }],
+        xaxis: { categories: ['Chat Solved', 'Chat Closed', 'Email Solved', 'Email Closed'], labels: { style: { colors: axisLabelColor, fontWeight: 800 } } },
+        legend: { show: false }
+      });
+      charts.c.render();
+    }
+
+    function setQueue(q, el) { 
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('nav-active')); 
+      el.classList.add('nav-active'); activeQ = q; 
+      document.getElementById('targetDisplay').innerText = `Target: ${QUEUE_TARGETS[q]}`;
+      runFilters(); 
+    }
+
+    function toggleView(view) {
+      document.getElementById('visualsContent').classList.toggle('hidden', view !== 'visuals');
+      document.getElementById('logsContent').classList.toggle('hidden', view !== 'logs');
+      document.getElementById('toggleVisuals').classList.toggle('btn-active', view === 'visuals');
+      document.getElementById('toggleLogs').classList.toggle('btn-active', view === 'logs');
+    }
+
+    function syncDateFilter(val) { 
+      const current = document.getElementById('matrixDateFilter').value;
+      document.getElementById('matrixDateFilter').value = (current === val) ? "All" : val;
+      runFilters(); 
+    }
+
+    function resetDate() { document.getElementById('matrixDateFilter').value = "All"; runFilters(); }
+
+    function resetFilters() { 
+      document.getElementById('filterSup').value="All";
+      document.getElementById('searchAgent').value = "";
+      document.getElementById('filterTenure').selectedIndex = -1;
+      document.getElementById('filterStatus').selectedIndex = -1;
+      document.getElementById('matrixDateFilter').value="All";
+      setQueue('All', document.querySelector('.nav-item'));
+    }
+  </script>
+</body>
+</html>
